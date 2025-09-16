@@ -19,27 +19,7 @@
 
 . /ventoy/hook/ventoy-hook-lib.sh
 
-vtlog "####### $0 $* ########"
-
-VTPATH_OLD=$PATH; PATH=$BUSYBOX_PATH:$VTOY_PATH/tool:$PATH
-
-wait_for_usb_disk_ready
-
-vtdiskname=$(get_ventoy_disk_name)
-if [ "$vtdiskname" = "unknown" ]; then
-    vtlog "ventoy disk not found"
-    PATH=$VTPATH_OLD
-    exit 0
-fi
-
-ventoy_udev_disk_common_hook "${vtdiskname#/dev/}2" "noreplace"
-
-if ! [ -e $VTOY_DM_PATH ]; then
-    blkdev_num=$($VTOY_PATH/tool/dmsetup ls | grep ventoy | sed 's/.*(\([0-9][0-9]*\),.*\([0-9][0-9]*\).*/\1 \2/')
-    mknod -m 0666 $VTOY_DM_PATH b $blkdev_num
-fi
-
-PATH=$VTPATH_OLD
-
-set_ventoy_hook_finish
+vtlog "mount ventoy.iso"
+mkdir -p /root/cdrom  >>$VTLOG 2>&1
+mount -t iso9660  $VTOY_PATH/mnt/fuse/ventoy.iso    /root/cdrom    >>$VTLOG 2>&1
 

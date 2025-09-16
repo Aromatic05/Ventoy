@@ -17,29 +17,11 @@
 # 
 #************************************************************************************
 
-. /ventoy/hook/ventoy-hook-lib.sh
-
-vtlog "####### $0 $* ########"
-
-VTPATH_OLD=$PATH; PATH=$BUSYBOX_PATH:$VTOY_PATH/tool:$PATH
-
-wait_for_usb_disk_ready
-
-vtdiskname=$(get_ventoy_disk_name)
-if [ "$vtdiskname" = "unknown" ]; then
-    vtlog "ventoy disk not found"
-    PATH=$VTPATH_OLD
-    exit 0
+if [ -e /init ] && $GREP -q '^mountroot$' /init; then
+    echo "Here before mountroot ..." >> $VTLOG    
+    $SED  "/^mountroot$/i\\$BUSYBOX_PATH/sh $VTOY_PATH/hook/debian/truenas-disk.sh"  -i /init
+    $SED  "/^mountroot$/i\\export LIVEMEDIA=/dev/mapper/ventoy"  -i /init
+    $SED  "/^mountroot$/i\\export LIVE_MEDIA=/dev/mapper/ventoy"  -i /init    
+    $SED  "/^mountroot$/i\\export FROMISO=$VTOY_PATH/mnt/fuse/ventoy.iso"  -i /init    
+    $SED  "/exec  *run-init/i\\$BUSYBOX_PATH/sh $VTOY_PATH/hook/debian/truenas-bottom.sh"  -i /init
 fi
-
-ventoy_udev_disk_common_hook "${vtdiskname#/dev/}2" "noreplace"
-
-if ! [ -e $VTOY_DM_PATH ]; then
-    blkdev_num=$($VTOY_PATH/tool/dmsetup ls | grep ventoy | sed 's/.*(\([0-9][0-9]*\),.*\([0-9][0-9]*\).*/\1 \2/')
-    mknod -m 0666 $VTOY_DM_PATH b $blkdev_num
-fi
-
-PATH=$VTPATH_OLD
-
-set_ventoy_hook_finish
-

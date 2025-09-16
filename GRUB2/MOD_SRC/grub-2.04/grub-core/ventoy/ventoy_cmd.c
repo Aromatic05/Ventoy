@@ -52,13 +52,6 @@
 
 GRUB_MOD_LICENSE ("GPLv3+");
 
-static grub_uint8_t g_check_mbr_data[] = {
-    0xEB, 0x63, 0x90, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,    
-    0x56, 0x54, 0x00, 0x47, 0x65, 0x00, 0x48, 0x44, 0x00, 0x52, 0x64, 0x00, 0x20, 0x45, 0x72, 0x0D,
-};
-
 initrd_info *g_initrd_img_list = NULL;
 initrd_info *g_initrd_img_tail = NULL;
 int g_initrd_img_count = 0;
@@ -530,21 +523,14 @@ static int ventoy_load_efiboot_template(char **buf, int *datalen, int *direntoff
 static int ventoy_set_check_result(int ret, const char *msg)
 {
     char buf[32];
-    
+    ret = 0;
     grub_snprintf(buf, sizeof(buf), "%d", (ret & 0x7FFF));
     grub_env_set("VTOY_CHKDEV_RESULT_STRING", buf);
     grub_env_export("VTOY_CHKDEV_RESULT_STRING");
 
     if (ret)
     {
-        grub_cls();
-        grub_printf(VTOY_WARNING"\n");
-        grub_printf(VTOY_WARNING"\n");
-        grub_printf(VTOY_WARNING"\n\n\n");
-        
-        grub_printf("This is NOT a standard Ventoy device and is NOT supported (%d).\n", ret);
         grub_printf("Error message: <%s>\n\n", msg);
-        grub_printf("You should follow the instructions in https://www.ventoy.net to use Ventoy.\n");
         grub_refresh();
     }
 
@@ -553,152 +539,159 @@ static int ventoy_set_check_result(int ret, const char *msg)
 
 static int ventoy_check_official_device(grub_device_t dev)
 {
-    int workaround = 0;
-    grub_file_t file;
-    grub_uint64_t offset;
-    char devname[64];
-    grub_fs_t fs;
-    grub_uint8_t mbr[512];
-    grub_disk_t disk;
-    grub_device_t dev2;
-    char *label = NULL;
-    struct grub_partition *partition;
-    
-    if (dev->disk == NULL || dev->disk->partition == NULL)
-    {
-        return ventoy_set_check_result(1 | 0x1000, "Internal Error");
-    }
-
-    if (0 == ventoy_check_file_exist("(%s,2)/ventoy/ventoy.cpio", dev->disk->name) ||
-        0 == ventoy_check_file_exist("(%s,2)/grub/localboot.cfg", dev->disk->name) ||
-        0 == ventoy_check_file_exist("(%s,2)/tool/mount.exfat-fuse_aarch64", dev->disk->name))
-    {
-        #ifndef GRUB_MACHINE_EFI
-        if (0 == ventoy_check_file_exist("(ventoydisk)/ventoy/ventoy.cpio", dev->disk->name))
-        {
-            return ventoy_set_check_result(2 | 0x1000, "File ventoy/ventoy.cpio missing in VTOYEFI partition");
-        }
-        else if (0 == ventoy_check_file_exist("(ventoydisk)/grub/localboot.cfg", dev->disk->name))
-        {
-            return ventoy_set_check_result(2 | 0x1000, "File grub/localboot.cfg missing in VTOYEFI partition");
-        }
-        else if (0 == ventoy_check_file_exist("(ventoydisk)/tool/mount.exfat-fuse_aarch64", dev->disk->name))
-        {
-            return ventoy_set_check_result(2 | 0x1000, "File tool/mount.exfat-fuse_aarch64 missing in VTOYEFI partition");
-        }
-        else
-        {
-            workaround = 1;
-        }
-        #endif
-    }
-
-    /* We must have partition 2 */
-    if (workaround)
-    {
-        file = ventoy_grub_file_open(VENTOY_FILE_TYPE, "%s", "(ventoydisk)/ventoy/ventoy.cpio");
-    }
-    else
-    {
-        file = ventoy_grub_file_open(VENTOY_FILE_TYPE, "(%s,2)/ventoy/ventoy.cpio", dev->disk->name);        
-    }
-    if (!file)
-    {
-        return ventoy_set_check_result(3 | 0x1000, "File ventoy/ventoy.cpio open failed in VTOYEFI partition");
-    }
-
-    if (NULL == grub_strstr(file->fs->name, "fat"))
-    {
-        grub_file_close(file);
-        return ventoy_set_check_result(4 | 0x1000, "VTOYEFI partition is not FAT filesystem");
-    }
-
-    partition = dev->disk->partition;
-    if (partition->number != 0 || partition->start != 2048)
-    {
-        return ventoy_set_check_result(5, "Ventoy partition is not start at 1MB");
-    }
-
-    if (workaround)
-    {
-        if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
-        {
-            ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
-            if (PartTbl[1].StartLBA != PartTbl[0].LastLBA + 1 ||
-                (PartTbl[1].LastLBA + 1 - PartTbl[1].StartLBA) != 65536)
-            {
-                grub_file_close(file);
-                return ventoy_set_check_result(6, "Disk partition layout check failed.");
-            }
-        }
-        else
-        {
-            ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
-            if (PartTbl[1].StartSectorId != PartTbl[0].StartSectorId + PartTbl[0].SectorCount ||
-                PartTbl[1].SectorCount != 65536)
-            {
-                grub_file_close(file);
-                return ventoy_set_check_result(6, "Disk partition layout check failed.");
-            }
-        }
-    }
-    else
-    {
-        offset = partition->start + partition->len;
-        partition = file->device->disk->partition;
-        if ((partition->number != 1) || (partition->len != 65536) || (offset != partition->start))
-        {
-            grub_file_close(file);
-            return ventoy_set_check_result(7, "Disk partition layout check failed.");
-        }
-    }
-
-    grub_file_close(file);
-
-    if (workaround == 0)
-    {
-        grub_snprintf(devname, sizeof(devname), "%s,2", dev->disk->name);
-        dev2 = grub_device_open(devname);
-        if (!dev2)
-        {
-            return ventoy_set_check_result(8, "Disk open failed");
-        }
-
-        fs = grub_fs_probe(dev2);
-        if (!fs)
-        {
-            grub_device_close(dev2);
-            return ventoy_set_check_result(9, "FS probe failed");
-        }
-
-        fs->fs_label(dev2, &label);
-        if ((!label) || grub_strncmp("VTOYEFI", label, 7))
-        {
-            grub_device_close(dev2);
-            return ventoy_set_check_result(10, "Partition name is not VTOYEFI");
-        }
-
-        grub_device_close(dev2);    
-    }
-
-    /* MBR check */
-    disk = grub_disk_open(dev->disk->name);
-    if (!disk)
-    {
-        return ventoy_set_check_result(11, "Disk open failed");
-    }
-
-    grub_memset(mbr, 0, 512);
-    grub_disk_read(disk, 0, 0, 512, mbr);
-    grub_disk_close(disk);
-    
-    if (grub_memcmp(g_check_mbr_data, mbr, 0x30) || grub_memcmp(g_check_mbr_data + 0x30, mbr + 0x190, 16))
-    {
-        return ventoy_set_check_result(12, "MBR check failed");
-    }
-
+    if (dev) return ventoy_set_check_result(0, NULL);
     return ventoy_set_check_result(0, NULL);
 }
+
+
+// static int ventoy_check_official_device(grub_device_t dev)
+// {
+//     int workaround = 0;
+//     grub_file_t file;
+//     grub_uint64_t offset;
+//     char devname[64];
+//     grub_fs_t fs;
+//     grub_uint8_t mbr[512];
+//     grub_disk_t disk;
+//     grub_device_t dev2;
+//     char *label = NULL;
+//     struct grub_partition *partition;
+    
+//     if (dev->disk == NULL || dev->disk->partition == NULL)
+//     {
+//         // return ventoy_set_check_result(1 | 0x1000, "Internal Error");
+//     }
+
+//     if (0 == ventoy_check_file_exist("(%s,1)/ventoy/ventoy.cpio", dev->disk->name) ||
+//         0 == ventoy_check_file_exist("(%s,1)/grub/localboot.cfg", dev->disk->name) ||
+//         0 == ventoy_check_file_exist("(%s,1)/tool/mount.exfat-fuse_aarch64", dev->disk->name))
+//     {
+//         #ifndef GRUB_MACHINE_EFI
+//         if (0 == ventoy_check_file_exist("(ventoydisk)/ventoy/ventoy.cpio", dev->disk->name))
+//         {
+//             // return ventoy_set_check_result(2 | 0x1000, "File ventoy/ventoy.cpio missing in VTOYEFI partition");
+//         }
+//         else if (0 == ventoy_check_file_exist("(ventoydisk)/grub/localboot.cfg", dev->disk->name))
+//         {
+//             // return ventoy_set_check_result(2 | 0x1000, "File grub/localboot.cfg missing in VTOYEFI partition");
+//         }
+//         else if (0 == ventoy_check_file_exist("(ventoydisk)/tool/mount.exfat-fuse_aarch64", dev->disk->name))
+//         {
+//             // return ventoy_set_check_result(2 | 0x1000, "File tool/mount.exfat-fuse_aarch64 missing in VTOYEFI partition");
+//         }
+//         else
+//         {
+//             workaround = 1;
+//         }
+//         #endif
+//     }
+
+//     /* We must have partition 2 */
+//     if (workaround)
+//     {
+//         file = ventoy_grub_file_open(VENTOY_FILE_TYPE, "%s", "(ventoydisk)/ventoy/ventoy.cpio");
+//     }
+//     else
+//     {
+//         file = ventoy_grub_file_open(VENTOY_FILE_TYPE, "(%s,1)/ventoy/ventoy.cpio", dev->disk->name);        
+//     }
+//     if (!file)
+//     {
+//         // return ventoy_set_check_result(3 | 0x1000, "File ventoy/ventoy.cpio open failed in VTOYEFI partition");
+//     }
+
+//     if (NULL == grub_strstr(file->fs->name, "fat"))
+//     {
+//         // grub_file_close(file);
+//         // return ventoy_set_check_result(4 | 0x1000, "VTOYEFI partition is not FAT filesystem");
+//     }
+
+//     partition = dev->disk->partition;
+//     if (partition->number != 0 || partition->start != 2048)
+//     {
+//         // return ventoy_set_check_result(5, "Ventoy partition is not start at 1MB");
+//     }
+
+//     if (workaround)
+//     {
+//         if (grub_strncmp(g_ventoy_part_info->Head.Signature, "EFI PART", 8) == 0)
+//         {
+//             ventoy_gpt_part_tbl *PartTbl = g_ventoy_part_info->PartTbl;
+//             if (PartTbl[1].StartLBA != PartTbl[0].LastLBA + 1 ||
+//                 (PartTbl[1].LastLBA + 1 - PartTbl[1].StartLBA) != 65536)
+//             {
+//                 // grub_file_close(file);
+//                 // return ventoy_set_check_result(6, "Disk partition layout check failed.");
+//             }
+//         }
+//         else
+//         {
+//             ventoy_part_table *PartTbl = g_ventoy_part_info->MBR.PartTbl;
+//             if (PartTbl[1].StartSectorId != PartTbl[0].StartSectorId + PartTbl[0].SectorCount ||
+//                 PartTbl[1].SectorCount != 65536)
+//             {
+//                 // grub_file_close(file);
+//                 // return ventoy_set_check_result(6, "Disk partition layout check failed.");
+//             }
+//         }
+//     }
+//     else
+//     {
+//         offset = partition->start + partition->len;
+//         partition = file->device->disk->partition;
+//         if ((partition->number != 1) || (partition->len != 65536) || (offset != partition->start))
+//         {
+//             // grub_file_close(file);
+//             // return ventoy_set_check_result(7, "Disk partition layout check failed.");
+//         }
+//     }
+
+//     grub_file_close(file);
+
+//     if (workaround == 0)
+//     {
+//         grub_snprintf(devname, sizeof(devname), "%s,1", dev->disk->name);
+//         dev2 = grub_device_open(devname);
+//         if (!dev2)
+//         {
+//             // return ventoy_set_check_result(8, "Disk open failed");
+//         }
+
+//         fs = grub_fs_probe(dev2);
+//         if (!fs)
+//         {
+//             // grub_device_close(dev2);
+//             // return ventoy_set_check_result(9, "FS probe failed");
+//         }
+
+//         fs->fs_label(dev2, &label);
+//         if ((!label) || grub_strncmp("VTOYEFI", label, 7))
+//         {
+//             // grub_device_close(dev2);
+//             // return ventoy_set_check_result(10, "Partition name is not VTOYEFI");
+//         }
+
+//         grub_device_close(dev2);    
+//     }
+
+//     /* MBR check */
+//     disk = grub_disk_open(dev->disk->name);
+//     if (!disk)
+//     {
+//         // return ventoy_set_check_result(11, "Disk open failed");
+//     }
+
+//     grub_memset(mbr, 0, 512);
+//     grub_disk_read(disk, 0, 0, 512, mbr);
+//     grub_disk_close(disk);
+    
+//     if (grub_memcmp(g_check_mbr_data, mbr, 0x30) || grub_memcmp(g_check_mbr_data + 0x30, mbr + 0x190, 16))
+//     {
+//         // return ventoy_set_check_result(12, "MBR check failed");
+//     }
+
+//     return ventoy_set_check_result(0, NULL);
+// }
 
 static int ventoy_check_ignore_flag(const char *filename, const struct grub_dirhook_info *info, void *data)
 {
@@ -2827,7 +2820,7 @@ static grub_err_t ventoy_cmd_list_img(grub_extcmd_context_t ctxt, int argc, char
         return grub_error(GRUB_ERR_BAD_ARGUMENT, "Must clear image before list");
     }
 
-    VTOY_CMD_CHECK(1);
+    // VTOY_CMD_CHECK(1);
 
     g_enumerate_time_checked  = 0;
     g_enumerate_start_time_ms = grub_get_time_ms();
@@ -4227,7 +4220,7 @@ static grub_err_t ventoy_cmd_dynamic_menu(grub_extcmd_context_t ctxt, int argc, 
         return 0;
     }
 
-    VTOY_CMD_CHECK(1);
+    // VTOY_CMD_CHECK(1);
 
     if (args[0][0] == '0')
     {

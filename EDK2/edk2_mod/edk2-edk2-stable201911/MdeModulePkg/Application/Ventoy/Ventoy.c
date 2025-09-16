@@ -463,35 +463,10 @@ EFI_STATUS EFIAPI ventoy_delete_variable(VOID)
     return Status;
 }
 
-#if (VENTOY_DEVICE_WARN != 0)
-STATIC VOID ventoy_warn_invalid_device(VOID)
-{
-    STATIC BOOLEAN flag = FALSE;
-
-    if (flag)
-    {
-        return;
-    }
-
-    flag = TRUE;
-    gST->ConOut->ClearScreen(gST->ConOut);
-    gST->ConOut->OutputString(gST->ConOut, VTOY_WARNING L"\r\n");
-    gST->ConOut->OutputString(gST->ConOut, VTOY_WARNING L"\r\n");
-    gST->ConOut->OutputString(gST->ConOut, VTOY_WARNING L"\r\n\r\n\r\n");
-
-    gST->ConOut->OutputString(gST->ConOut, L"This is NOT a standard Ventoy device and is NOT supported.\r\n\r\n");
-    gST->ConOut->OutputString(gST->ConOut, L"You should follow the official instructions in https://www.ventoy.net\r\n");
+// STATIC VOID ventoy_warn_invalid_device(VOID)
+// {
     
-    gST->ConOut->OutputString(gST->ConOut, L"\r\n\r\nWill exit after 10 seconds ...... ");
-
-    sleep(10);
-}
-#else
-STATIC VOID ventoy_warn_invalid_device(VOID)
-{
-    
-}
-#endif
+// }
 
 STATIC EFI_STATUS EFIAPI ventoy_load_image
 (
@@ -587,8 +562,8 @@ STATIC EFI_STATUS EFIAPI ventoy_find_iso_disk(IN EFI_HANDLE ImageHandle)
                     pMBR->PartTbl[1].SectorCount != 65536 ||
                     pMBR->PartTbl[1].StartSectorId != pMBR->PartTbl[0].StartSectorId + pMBR->PartTbl[0].SectorCount)
                 {
-                    debug("Failed to check disk part table");
-                    ventoy_warn_invalid_device();
+                    // debug("Failed to check disk part table");
+                    // ventoy_warn_invalid_device();
                 }
             }
         
@@ -895,25 +870,25 @@ STATIC EFI_STATUS EFIAPI ventoy_parse_cmdline(IN EFI_HANDLE ImageHandle)
     }
 
     pPos = StrStr(pCmdLine, L"env_param=");
-    if (!pPos)
-    {
-        return EFI_INVALID_PARAMETER;
-    }
+    // if (!pPos)
+    // {
+    //     return EFI_INVALID_PARAMETER;
+    // }
     
     pGrubParam = (ventoy_grub_param *)StrHexToUintn(pPos + StrLen(L"env_param="));
     grub_env_set = pGrubParam->grub_env_set;
     grub_env_get = pGrubParam->grub_env_get;
     pEnv = grub_env_get("VTOY_CHKDEV_RESULT_STRING");
-    if (!pEnv)
-    {
-        return EFI_INVALID_PARAMETER;
-    }
+    // if (!pEnv)
+    // {
+    //     return EFI_INVALID_PARAMETER;
+    // }
 
-    if (pEnv[0] != '0' || pEnv[1] != 0)
-    {
-        ventoy_warn_invalid_device();
-        return EFI_INVALID_PARAMETER;
-    }
+    // if (pEnv[0] != '0' || pEnv[1] != 0)
+    // {
+    //     ventoy_warn_invalid_device();
+    //     return EFI_INVALID_PARAMETER;
+    // }
     
     g_file_replace_list = &pGrubParam->file_replace;
     old_cnt = g_file_replace_list->old_file_cnt;

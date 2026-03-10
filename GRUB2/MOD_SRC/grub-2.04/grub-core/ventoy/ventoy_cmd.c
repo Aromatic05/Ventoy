@@ -3403,6 +3403,7 @@ int ventoy_get_block_list(grub_file_t file, ventoy_img_chunk_list *chunklist, gr
 static grub_err_t ventoy_cmd_img_sector(grub_extcmd_context_t ctxt, int argc, char **args)
 {
     int rc;
+    int fs_type;
     grub_file_t file;
     grub_disk_addr_t start;
     char errmsg[128];
@@ -3425,7 +3426,8 @@ static grub_err_t ventoy_cmd_img_sector(grub_extcmd_context_t ctxt, int argc, ch
         grub_free(g_img_chunk_list.chunk);
     }
 
-    if (ventoy_get_fs_type(file->fs->name) >= ventoy_fs_max)
+    fs_type = ventoy_get_fs_type(file->fs->name);
+    if (fs_type >= ventoy_fs_max)
     {
         grub_file_close(file);
         return grub_error(GRUB_ERR_BAD_ARGUMENT, "Unsupported filesystem %s\n", file->fs->name); 
@@ -3451,8 +3453,11 @@ static grub_err_t ventoy_cmd_img_sector(grub_extcmd_context_t ctxt, int argc, ch
 
     if (rc)
     {
-        vtoy_tip(10, "%s\n\nWill exit in 10 seconds...\n", errmsg);
-        grub_exit();
+        if (fs_type == ventoy_fs_btrfs)
+        {
+            vtoy_tip(10, "%s\n\nWill exit in 10 seconds...\n", errmsg);
+            grub_exit();            
+        }
         return grub_error(GRUB_ERR_NOT_IMPLEMENTED_YET, "%s\n", errmsg);
     }
 
@@ -7027,6 +7032,7 @@ static cmd_para ventoy_cmds[] =
     { "vt_cmp_checksum", ventoy_cmd_cmp_checksum, 0, NULL, "", "", NULL },
     { "vt_push_menu_lang", ventoy_cmd_push_menulang, 0, NULL, "", "", NULL },
     { "vt_pop_menu_lang", ventoy_cmd_pop_menulang, 0, NULL, "", "", NULL },
+    { "vt_linux_initrd", ventoy_cmd_linux_initrd, 0, NULL, "", "", NULL },
 
 };
 

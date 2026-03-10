@@ -177,6 +177,8 @@ ventoy_get_os_type() {
             echo 'deepin'; return
         elif $GREP -q 'chinauos' /etc/os-release; then
             echo 'deepin'; return
+        elif $GREP -qi 'aerynos' /etc/os-release; then
+            echo 'rhel7'; return
         fi
     fi
     
@@ -374,7 +376,7 @@ ventoy_get_os_type() {
         fi
     fi
     if [ -f /etc/kylin-release ]; then
-        if $GREP -i -q -m1 'Kylin.*Server.* V11 ' /etc/kylin-release; then
+        if $GREP -i -q -m1 'Kylin.*Server.* V1[1-9] ' /etc/kylin-release; then
             echo 'openEuler'; return
         fi
     fi

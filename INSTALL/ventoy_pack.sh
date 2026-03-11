@@ -31,31 +31,12 @@ cd ../Unix
 sh pack_unix.sh
 cd -
 
-LOOP=$(losetup -f)
-mknod -m 666  $LOOP b 7 0
-
-rm -f img.bin
-dd if=/dev/zero of=img.bin bs=1M count=256 status=none
-
-losetup -P $LOOP img.bin 
-
-while ! grep -q 524288 /sys/block/${LOOP#/dev/}/size 2>/dev/null; do
-    echo "wait $LOOP ..."
-    sleep 1
-done
-
-format_ventoy_disk_mbr 0 $LOOP fdisk
-
-$GRUB_DIR/sbin/grub-bios-setup  --skip-fs-probe  --directory="./grub/i386-pc"  $LOOP
-
 curver=$(get_ventoy_version_from_cfg ./grub/grub.cfg)
 
 tmpmnt=./ventoy-${curver}-mnt
 
 rm -rf $tmpmnt
 mkdir -p $tmpmnt
-
-mount ${LOOP}p2  $tmpmnt 
 
 mkdir -p $tmpmnt/grub
 
@@ -113,14 +94,9 @@ dd status=none bs=1024 count=16  if=./tool/aarch64/vtoycli of=$tmpmnt/tool/mount
 cp -a ./tool/create_ventoy_iso_part_dm.sh  $tmpmnt/tool/
 
 
-# rm -f $tmpmnt/grub/i386-pc/*.img
-mkdir -p $tmpmnt/install
-dd if=$LOOP of=$tmpmnt/install/boot.img bs=1 count=512  status=none
-dd if=$LOOP of=$tmpmnt/install/core.img bs=512 count=2047 skip=1 status=none
 cd $tmpmnt/../
 tar -czvf ventoy-${curver}.tar.gz $tmpmnt
-umount $tmpmnt && rm -rf $tmpmnt
-losetup -d $LOOP && rm -f img.bin
+rm -rf $tmpmnt
 
 
 

@@ -35,8 +35,8 @@ sh buildedk.sh >> $LOG 2>&1 || exit 1
 # If you want to rebuild them, just uncomment them.
 #
 
-#cd $VTOY_PATH/VtoyTool
-#sh build.sh || exit 1
+cd $VTOY_PATH/VtoyTool
+sh build.sh || exit 1
 
 #cd $VTOY_PATH/vtoycli/fat_io_lib
 #sh buildlib.sh

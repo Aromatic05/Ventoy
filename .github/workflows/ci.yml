@@ -17,21 +17,14 @@ jobs:
       run: docker compose up
     - uses: actions/upload-artifact@v4
       with:
-        name: ventoy-windows
-        path: INSTALL/ventoy-*windows*
-    - uses: actions/upload-artifact@v4
-      with:
-        name: ventoy-linux
-        path: INSTALL/ventoy-*linux*
-    - uses: actions/upload-artifact@v4
-      with:
-        name: ventoy-livecd
-        path: INSTALL/ventoy-*livecd*
+        name: ventoy-pack
+        path: INSTALL/ventoy-*.tar.gz
+
     - uses: actions/upload-artifact@v4
       with:
         name: SHA256SUM
         path: INSTALL/sha256.txt
     - uses: actions/upload-artifact@v4
       with:
-        name: xxx-build-log
+        name: ventoy-build-log
         path: DOC/build.log

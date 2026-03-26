@@ -642,28 +642,32 @@ static int vtoydm_vlnk_convert(char *disk, int len, int *part, uint64_t *offset)
         goto end;
     }
 
-    debug("dm vlnk convert vtoy_reserved=%d\n", param.vtoy_reserved[6]);
+    debug("dm convert vtoy_reserved=%d part_id=%u disk_size=%llu\n",
+          param.vtoy_reserved[6], param.vtoy_disk_part_id,
+          (unsigned long long)param.vtoy_disk_size);
 
-    if (param.vtoy_reserved[6])
+    cnt = vtoy_find_disk_by_guid(&param, diskname);
+    debug("find by 8-byte signature cnt=%d\n", cnt);
+    if (cnt != 1)
     {
-        cnt = vtoy_find_disk_by_guid(&param, diskname);
-        debug("find by 8-byte signature cnt=%d\n", cnt);
-        if (cnt != 1)
-        {
-            cnt = vtoy_find_disk_by_size(param.vtoy_disk_size, diskname);
-            debug("find by size cnt=%d\n", cnt);
-        }
-        if (cnt == 1)
+        cnt = vtoy_find_disk_by_size(param.vtoy_disk_size, diskname);
+        debug("find by size cnt=%d\n", cnt);
+    }
+
+    if (cnt == 1)
+    {
+        if (param.vtoy_disk_part_id > 0)
         {
             *part = param.vtoy_disk_part_id;
-            *offset = vtoydm_get_part_start(diskname, *part);
-            
-            debug("VLNK <%s> <%s> <P%d> <%llu>\n", disk, diskname, *part, (unsigned long long)(*offset));
-
-            snprintf(disk, len, "/dev/%s", diskname);
-
-            rc = 0;
         }
+
+        *offset = vtoydm_get_part_start(diskname, *part);
+        
+        debug("DM <%s> <%s> <P%d> <%llu>\n", disk, diskname, *part, (unsigned long long)(*offset));
+
+        snprintf(disk, len, "/dev/%s", diskname);
+
+        rc = 0;
     }
 
 end:

@@ -333,8 +333,7 @@ int vtoy_find_disk_by_guid(ventoy_os_param *param, char *diskname)
         memset(vtguid, 0, sizeof(vtguid));
         memset(vtsig, 0, sizeof(vtsig));
         rc = vtoy_get_disk_guid(p->d_name, vtguid, vtsig);
-        (void)vtsig;
-        if (rc == 0 && memcmp(vtguid, param->vtoy_disk_guid, 8) == 0)
+        if (rc == 0 && memcmp(vtsig, param->vtoy_disk_guid, 4) == 0)
         {
             sprintf(diskname, "%s", p->d_name);
             count++;
@@ -464,11 +463,9 @@ static int vtoy_check_device(ventoy_os_param *param, const char *device)
     debug("param->vtoy_disk_size=%llu size=%llu\n",
           (unsigned long long)param->vtoy_disk_size, (unsigned long long)size);
 
-    (void)vtsig;
-
-    if (memcmp(vtguid, param->vtoy_disk_guid, 8) == 0)
+    if (memcmp(vtsig, param->vtoy_disk_guid, 4) == 0)
     {
-        debug("<%s> disk 8-byte signature match\n", device);
+        debug("<%s> disk 4-byte MBR signature match\n", device);
         return 0;
     }
 

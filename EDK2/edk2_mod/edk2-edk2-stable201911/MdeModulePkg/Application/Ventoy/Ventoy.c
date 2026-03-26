@@ -558,7 +558,7 @@ STATIC EFI_STATUS EFIAPI ventoy_find_iso_disk(IN EFI_HANDLE ImageHandle)
         if (g_chain->os_param.vtoy_disk_size == DiskSize && SizeMatchHandle == NULL)
         {
             SizeMatchHandle = Handles[i];
-            SizeMatchBlockIo = pBlockIo;
+            pSizeMatchBlockIo = pBlockIo;
         }
 
         Status = pBlockIo->ReadBlocks(pBlockIo, pBlockIo->Media->MediaId, 0, 512, pBuffer);
@@ -586,7 +586,7 @@ STATIC EFI_STATUS EFIAPI ventoy_find_iso_disk(IN EFI_HANDLE ImageHandle)
     {
         if (SizeMatchHandle != NULL)
         {
-            Status = ventoy_bind_iso_disk_handle(ImageHandle, SizeMatchHandle, SizeMatchBlockIo);
+            Status = ventoy_bind_iso_disk_handle(ImageHandle, SizeMatchHandle, pSizeMatchBlockIo);
             if (!EFI_ERROR(Status))
             {
                 debug("Find Disk by size fallback Handle:%p DP:%s", SizeMatchHandle,

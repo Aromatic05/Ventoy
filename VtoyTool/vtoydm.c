@@ -647,7 +647,12 @@ static int vtoydm_vlnk_convert(char *disk, int len, int *part, uint64_t *offset)
     if (param.vtoy_reserved[6])
     {
         cnt = vtoy_find_disk_by_guid(&param, diskname);
-        debug("vtoy_find_disk_by_guid cnt=%d\n", cnt);        
+        debug("find by 8-byte signature cnt=%d\n", cnt);
+        if (cnt != 1)
+        {
+            cnt = vtoy_find_disk_by_size(param.vtoy_disk_size, diskname);
+            debug("find by size cnt=%d\n", cnt);
+        }
         if (cnt == 1)
         {
             *part = param.vtoy_disk_part_id;
@@ -812,4 +817,3 @@ int main(int argc, char **argv)
     return vtoydm_main(argc, argv);
 }
 #endif
-

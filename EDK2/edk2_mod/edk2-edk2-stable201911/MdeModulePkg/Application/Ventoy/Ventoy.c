@@ -505,13 +505,28 @@ STATIC EFI_STATUS EFIAPI ventoy_load_image
 }
 
 
+STATIC EFI_STATUS EFIAPI ventoy_bind_iso_disk_handle(IN EFI_HANDLE ImageHandle, IN EFI_HANDLE Handle, IN EFI_BLOCK_IO_PROTOCOL *pBlockIo)
+{
+    EFI_STATUS Status;
+
+    gBlockData.RawBlockIoHandle = Handle;
+    gBlockData.pRawBlockIo = pBlockIo;
+    Status = gBS->OpenProtocol(Handle, &gEfiDevicePathProtocolGuid,
+                               (VOID **)&(gBlockData.pDiskDevPath),
+                               ImageHandle,
+                               Handle,
+                               EFI_OPEN_PROTOCOL_GET_PROTOCOL);
+    return Status;
+}
+
 STATIC EFI_STATUS EFIAPI ventoy_find_iso_disk(IN EFI_HANDLE ImageHandle)
 {
     UINTN i = 0;
     UINTN Count = 0;
     UINT64 DiskSize = 0;
-    MBR_HEAD *pMBR = NULL;
     UINT8 *pBuffer = NULL;
+    EFI_HANDLE SizeMatchHandle = NULL;
+    EFI_BLOCK_IO_PROTOCOL *pSizeMatchBlockIo = NULL;
     EFI_HANDLE *Handles;
     EFI_STATUS Status = EFI_SUCCESS;
     EFI_BLOCK_IO_PROTOCOL *pBlockIo;
@@ -540,9 +555,10 @@ STATIC EFI_STATUS EFIAPI ventoy_find_iso_disk(IN EFI_HANDLE ImageHandle)
 
         DiskSize = (pBlockIo->Media->LastBlock + 1) * pBlockIo->Media->BlockSize;
         debug("This Disk size: %llu", DiskSize);
-        if (g_chain->os_param.vtoy_disk_size != DiskSize)
+        if (g_chain->os_param.vtoy_disk_size == DiskSize && SizeMatchHandle == NULL)
         {
-            continue;
+            SizeMatchHandle = Handles[i];
+            SizeMatchBlockIo = pBlockIo;
         }
 
         Status = pBlockIo->ReadBlocks(pBlockIo, pBlockIo->Media->MediaId, 0, 512, pBuffer);
@@ -552,32 +568,15 @@ STATIC EFI_STATUS EFIAPI ventoy_find_iso_disk(IN EFI_HANDLE ImageHandle)
             continue;
         }
 
-        if (CompareMem(g_chain->os_param.vtoy_disk_guid, pBuffer + 0x180, 16) == 0 &&
-            CompareMem(g_chain->os_param.vtoy_disk_signature, pBuffer + 0x1b8, 4) == 0)
+        if (CompareMem(g_chain->os_param.vtoy_disk_guid, pBuffer + 0x180, 8) == 0)
         {
-            pMBR = (MBR_HEAD *)pBuffer;
-            if (g_os_param_reserved[6] == 0 && pMBR->PartTbl[0].FsFlag != 0xEE)
+            Status = ventoy_bind_iso_disk_handle(ImageHandle, Handles[i], pBlockIo);
+            if (!EFI_ERROR(Status))
             {
-                if (pMBR->PartTbl[0].StartSectorId != 2048 ||
-                    pMBR->PartTbl[1].SectorCount != 65536 ||
-                    pMBR->PartTbl[1].StartSectorId != pMBR->PartTbl[0].StartSectorId + pMBR->PartTbl[0].SectorCount)
-                {
-                    // debug("Failed to check disk part table");
-                    // ventoy_warn_invalid_device();
-                }
+                debug("Find Disk by 8-byte signature Handle:%p DP:%s", Handles[i],
+                    ConvertDevicePathToText(gBlockData.pDiskDevPath, FALSE, FALSE));
+                break;
             }
-        
-            gBlockData.RawBlockIoHandle = Handles[i];
-            gBlockData.pRawBlockIo = pBlockIo;
-            gBS->OpenProtocol(Handles[i], &gEfiDevicePathProtocolGuid, 
-                              (VOID **)&(gBlockData.pDiskDevPath),
-                              ImageHandle,
-                              Handles[i],
-                              EFI_OPEN_PROTOCOL_GET_PROTOCOL);
-            
-            debug("Find Ventoy Disk Sig Handle:%p DP:%s", Handles[i], 
-                ConvertDevicePathToText(gBlockData.pDiskDevPath, FALSE, FALSE));
-            break;
         }
     }
 
@@ -585,6 +584,16 @@ STATIC EFI_STATUS EFIAPI ventoy_find_iso_disk(IN EFI_HANDLE ImageHandle)
 
     if (i >= Count)
     {
+        if (SizeMatchHandle != NULL)
+        {
+            Status = ventoy_bind_iso_disk_handle(ImageHandle, SizeMatchHandle, SizeMatchBlockIo);
+            if (!EFI_ERROR(Status))
+            {
+                debug("Find Disk by size fallback Handle:%p DP:%s", SizeMatchHandle,
+                    ConvertDevicePathToText(gBlockData.pDiskDevPath, FALSE, FALSE));
+                return EFI_SUCCESS;
+            }
+        }
         return EFI_NOT_FOUND;
     }
     else
@@ -1318,4 +1327,3 @@ EFI_STATUS EFIAPI VentoyEfiMain
 
     return EFI_SUCCESS;
 }
-

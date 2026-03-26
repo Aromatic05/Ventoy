@@ -568,12 +568,12 @@ STATIC EFI_STATUS EFIAPI ventoy_find_iso_disk(IN EFI_HANDLE ImageHandle)
             continue;
         }
 
-        if (CompareMem(g_chain->os_param.vtoy_disk_guid, pBuffer + 0x180, 8) == 0)
+        if (CompareMem(g_chain->os_param.vtoy_disk_guid, pBuffer + 0x1B8, 4) == 0)
         {
             Status = ventoy_bind_iso_disk_handle(ImageHandle, Handles[i], pBlockIo);
             if (!EFI_ERROR(Status))
             {
-                debug("Find Disk by 8-byte signature Handle:%p DP:%s", Handles[i],
+                debug("Find Disk by 4-byte MBR signature Handle:%p DP:%s", Handles[i],
                     ConvertDevicePathToText(gBlockData.pDiskDevPath, FALSE, FALSE));
                 break;
             }

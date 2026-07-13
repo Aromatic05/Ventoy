@@ -1325,5 +1325,10 @@ EFI_STATUS EFIAPI VentoyEfiMain
 
     ventoy_enable_ex_filesystem();
 
+    if (g_os_param_reserved[11])
+    {
+        ventoy_unlock_res();
+    }
+
     return EFI_SUCCESS;
 }

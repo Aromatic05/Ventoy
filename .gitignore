@@ -1,0 +1,5 @@
+# Download cache and documentation build by-products
+/.cache/
+/DOC/build.log
+/DOC/dietlibc-0.34.tar.xz
+/DOC/musl-1.2.1.tar.gz

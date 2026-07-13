@@ -3,3 +3,25 @@
 /DOC/build.log
 /DOC/dietlibc-0.34.tar.xz
 /DOC/musl-1.2.1.tar.gz
+
+# Generated third-party trees and firmware build outputs
+/EDK2/edk2-edk2-stable201911.zip
+/EDK2/edk2-edk2-stable201911/
+/GRUB2/grub-2.04.tar.xz
+/GRUB2/INSTALL/
+/GRUB2/NBP/
+/GRUB2/PXE/
+/GRUB2/SRC/
+/IPXE/ipxe-3fe683e/
+/IMG/ventoy.cpio
+/IMG/ventoy_arm64.cpio
+/IMG/ventoy_mips64.cpio
+/IMG/ventoy_x86.cpio
+/IMG/vtloopex.cpio
+/INSTALL/grub/arm64-efi/
+/INSTALL/grub/i386-efi/
+/INSTALL/grub/i386-pc/
+/INSTALL/grub/mips64el-efi/
+/INSTALL/grub/x86_64-efi/
+/INSTALL/ventoy-*.tar.gz
+/Unix/ventoy_unix.cpio

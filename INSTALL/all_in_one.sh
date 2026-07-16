@@ -26,7 +26,7 @@ sh buildipxe.sh >> $LOG 2>&1 || exit 1
 
 cilog "build edk2 ..."
 cd $VTOY_PATH/EDK2
-sh buildedk.sh >> $LOG 2>&1 || exit 1
+bash buildedk.sh >> $LOG 2>&1 || exit 1
 
 
 

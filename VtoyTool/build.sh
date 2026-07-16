@@ -2,8 +2,8 @@
 
 rm -f vtoytool/00/*
 
-/opt/diet64/bin/diet -Os gcc -DVTOY_X86_64 -D_FILE_OFFSET_BITS=64  *.c BabyISO/*.c -IBabyISO -Wall -DBUILD_VTOY_TOOL -DUSE_DIET_C  -o  vtoytool_64
-/opt/diet32/bin/diet -Os gcc -DVTOY_I386 -D_FILE_OFFSET_BITS=64 -m32  *.c BabyISO/*.c -IBabyISO -Wall -DBUILD_VTOY_TOOL -DUSE_DIET_C  -o  vtoytool_32
+/opt/diet64/bin/diet -Os gcc -D__bitwise= -DVTOY_X86_64 -D_FILE_OFFSET_BITS=64  *.c BabyISO/*.c -IBabyISO -Wall -DBUILD_VTOY_TOOL -DUSE_DIET_C  -o  vtoytool_64
+/opt/diet32/bin/diet -Os gcc -D__bitwise= -DVTOY_I386 -D_FILE_OFFSET_BITS=64 -m32  *.c BabyISO/*.c -IBabyISO -Wall -DBUILD_VTOY_TOOL -DUSE_DIET_C  -o  vtoytool_32
 
 aarch64-buildroot-linux-uclibc-gcc -Os -static -DVTOY_AA64 -D_FILE_OFFSET_BITS=64  *.c BabyISO/*.c -IBabyISO -Wall -DBUILD_VTOY_TOOL  -o  vtoytool_aa64
 
@@ -25,4 +25,3 @@ else
     echo -e '\n############### FAILED ################\n'
     exit 1
 fi
-

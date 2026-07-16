@@ -22,7 +22,7 @@ cd ./SRC/grub-2.04
 echo '======== build grub2 for x86_64-efi ==============='
 make distclean
 ./autogen.sh
-./configure  --with-platform=efi --prefix=$VT_GRUB_DIR/INSTALL/
+./configure --disable-werror --with-platform=efi --prefix=$VT_GRUB_DIR/INSTALL/
 make -j 16 || exit 1
 sh install.sh  uefi
 
@@ -31,7 +31,7 @@ sh install.sh  uefi
 echo '======== build grub2 for i386-efi ==============='
 make distclean
 ./autogen.sh
-./configure --target=i386 --with-platform=efi  --prefix=$VT_GRUB_DIR/INSTALL/
+./configure --disable-werror --target=i386 --with-platform=efi --prefix=$VT_GRUB_DIR/INSTALL/
 make -j 16 || exit 1
 sh install.sh  i386efi
 
@@ -42,7 +42,7 @@ echo '======== build grub2 for arm64-efi ==============='
 PATH=$PATH:/opt/gcc-linaro-7.4.1-2019.02-x86_64_aarch64-linux-gnu/bin
 make distclean
 ./autogen.sh
-./configure  --prefix=$VT_GRUB_DIR/INSTALL/ \
+./configure --disable-werror --prefix=$VT_GRUB_DIR/INSTALL/ \
 --target=aarch64 --with-platform=efi \
 --host=x86_64-linux-gnu  \
 HOST_CC=x86_64-linux-gnu-gcc \
@@ -59,7 +59,7 @@ sh install.sh arm64
 #http://ftp.loongnix.org/os/loongnix-server/1.7/os/Source/SPackages/grub2-2.02-0.40.lns7.14.loongnix.src.rpm
 make distclean
 ./autogen.sh
-./configure  --prefix=/home/share/Ventoy/GRUB2/INSTALL/ \
+./configure --disable-werror --prefix=/home/share/Ventoy/GRUB2/INSTALL/ \
 --target=mips64el --with-platform=efi \
 --host=x86_64-linux-gnu  \
 HOST_CC=x86_64-linux-gnu-gcc \
@@ -77,11 +77,10 @@ sh install.sh mips64el
 echo '======== build grub2 for i386-pc ==============='
 make distclean
 ./autogen.sh
-./configure --target=i386 --with-platform=pc --prefix=$VT_GRUB_DIR/INSTALL/
+./configure --disable-werror --target=i386 --with-platform=pc --prefix=$VT_GRUB_DIR/INSTALL/
 make -j 16 || exit 1
 sh install.sh
 
 
 
 cd ../../
-

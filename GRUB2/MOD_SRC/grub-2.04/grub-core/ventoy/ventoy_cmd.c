@@ -5092,7 +5092,7 @@ int ventoy_load_part_table(const char *diskname)
     return 0;
 }
 
-static void ventoy_prompt_end(void)
+void ventoy_prompt_end(void)
 {
     int op = 0;
     char c;
@@ -7062,5 +7062,3 @@ int ventoy_unregister_all_cmd(void)
     
     return 0;
 }
-
-

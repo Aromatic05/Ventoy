@@ -12,9 +12,25 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    - name: Restore build cache
+      uses: actions/cache@v4
+      with:
+        path: .cache
+        key: ventoy-build-${{ runner.os }}-${{ hashFiles('Dockerfile', 'INSTALL/docker_ci_build.sh') }}
+        restore-keys: |
+          ventoy-build-${{ runner.os }}-
+    - uses: docker/setup-buildx-action@v3
+    - name: Build CI image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        load: true
+        tags: ventoy-ci:latest
+        cache-from: type=gha,scope=ventoy-ci
+        cache-to: type=gha,mode=max,scope=ventoy-ci
     - name: Run docker compose up
-      run: docker compose up
+      run: docker compose up --no-build
     - uses: actions/upload-artifact@v4
       with:
         name: ventoy

@@ -3,6 +3,7 @@ version: '2'
 services:
   ventoy:
     build: .
+    image: ventoy-ci:latest
     privileged: true
     volumes:
      - .:/ventoy

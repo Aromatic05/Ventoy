@@ -25,6 +25,7 @@
 #include <errno.h>
 #include <unistd.h>
 #ifdef VTOY_X86_64
+#undef __leaf
 #include <cpuid.h>
 #endif
 
@@ -638,6 +639,7 @@ static int vtoykmod_check_ibt(void)
 }
 #endif
 
+
 int vtoykmod_main(int argc, char **argv)
 {
     int i;
@@ -688,4 +690,3 @@ int main(int argc, char **argv)
     return vtoykmod_main(argc, argv);
 }
 #endif
-

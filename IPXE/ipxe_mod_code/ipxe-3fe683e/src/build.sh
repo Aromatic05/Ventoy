@@ -3,7 +3,7 @@
 build_bios() {
     rm -f bin/ipxe.iso
 
-    make -e -k -j 8 bin/ipxe.iso   BIOS_MODE=BIOS
+    make -e -k -j 8 bin/ipxe.iso BIOS_MODE=BIOS NO_WERROR=1
 
     if ! [ -e bin/ipxe.iso ]; then
         echo "Failed"
@@ -27,5 +27,4 @@ build_bios() {
 
 
 build_bios
-
 

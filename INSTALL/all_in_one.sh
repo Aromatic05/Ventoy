@@ -70,9 +70,10 @@ sh build.sh || exit 1
 
 cd $VTOY_PATH/INSTALL
 
-if [ "$1" = "CI" ]; then
-    Ver=$(date +%m%d%H%M)
-    sed "s/VENTOY_VERSION=.*/VENTOY_VERSION=\"$Ver\"/"  -i ./grub/grub.cfg
+Ver=$(sed -n 's/^set VENTOY_VERSION="\([^"]*\)".*/\1/p' ./grub/grub.cfg)
+if [ -z "$Ver" ]; then
+    cilog "Cannot determine Ventoy version from grub.cfg"
+    exit 1
 fi
 
 cilog "packing ventoy-$Ver ..."

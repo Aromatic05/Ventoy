@@ -751,8 +751,8 @@ static int vtoydm_vlnk_convert(char *disk, int len, int *part, uint64_t *offset)
           param.vtoy_reserved[6], param.vtoy_disk_part_id,
           (unsigned long long)param.vtoy_disk_size);
 
-    cnt = vtoy_find_disk_by_guid(&param, diskname);
-    debug("find by 4-byte MBR signature cnt=%d\n", cnt);
+    cnt = vtoy_find_disk_by_identity(&param, diskname);
+    debug("find by disk identity cnt=%d\n", cnt);
     if (cnt != 1)
     {
         cnt = vtoy_find_disk_by_size(param.vtoy_disk_size, diskname);

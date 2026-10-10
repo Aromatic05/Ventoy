@@ -489,8 +489,18 @@ static int ventoy_load_efiboot_template(char **buf, int *datalen, int *direntoff
     char exec[128];
     char *data = NULL;
     grub_uint32_t offset;
+    const char *runtime = ventoy_get_env("VTOY_RUNTIME_PATH");
 
-    file = ventoy_grub_file_open(GRUB_FILE_TYPE_LINUX_INITRD, "%s/ventoy/ventoy_efiboot.img.xz", ventoy_get_env("vtoy_efi_part"));
+    if (runtime && runtime[0])
+    {
+        file = ventoy_grub_file_open(GRUB_FILE_TYPE_LINUX_INITRD,
+                                     "%s/ventoy_efiboot.img.xz", runtime);
+    }
+    else
+    {
+        file = ventoy_grub_file_open(GRUB_FILE_TYPE_LINUX_INITRD,
+                                     "%s/ventoy/ventoy_efiboot.img.xz", ventoy_get_env("vtoy_efi_part"));
+    }
     if (file == NULL)
     {
         debug("failed to open file <%s>\n", "ventoy_efiboot.img.xz");
@@ -1646,15 +1656,7 @@ int ventoy_img_name_valid(const char *filename, grub_size_t namelen)
 static int ventoy_vlnk_iterate_partition(struct grub_disk *disk, const grub_partition_t partition, void *data)
 {
     ventoy_vlnk_part *node = NULL;
-    grub_uint32_t SelfSig;
     grub_uint32_t *pSig = (grub_uint32_t *)data;
-
-    /* skip Ventoy partition 1/2 */
-    grub_memcpy(&SelfSig, g_ventoy_part_info->MBR.BootCode + 0x1b8, 4);
-    if (partition->number < 2 && SelfSig == *pSig)
-    {
-        return 0;
-    }
 
     node = grub_zalloc(sizeof(ventoy_vlnk_part));
     if (node)
@@ -3046,6 +3048,10 @@ int ventoy_get_disk_guid(const char *filename, grub_uint8_t *guid, grub_uint8_t 
     char *device_name;
     char *pos;
     char *pos2;
+    int result = 0;
+
+    grub_memset(guid, 0, 16);
+    grub_memset(signature, 0, 4);
     
     device_name = grub_file_get_device_name(filename);
     if (!device_name)
@@ -3073,17 +3079,25 @@ int ventoy_get_disk_guid(const char *filename, grub_uint8_t *guid, grub_uint8_t 
     disk = grub_disk_open(pos);
     if (disk)
     {
-        grub_disk_read(disk, 0, 0x180, 16, guid);
-        grub_disk_read(disk, 0, 0x1b8, 4, signature);
+        if (grub_disk_read(disk, 0, 0x180, 16, guid) != GRUB_ERR_NONE)
+        {
+            grub_memset(guid, 0, 16);
+            result = 1;
+        }
+        if (grub_disk_read(disk, 0, 0x1b8, 4, signature) != GRUB_ERR_NONE)
+        {
+            grub_memset(signature, 0, 4);
+            result = 1;
+        }
         grub_disk_close(disk);
     }
     else
     {
-        return 1;
+        result = 1;
     }
 
     grub_free(device_name);
-    return 0;
+    return result;
 }
 
 grub_uint32_t ventoy_get_iso_boot_catlog(grub_file_t file)
@@ -3201,7 +3215,11 @@ void ventoy_fill_os_param(grub_file_t file, ventoy_os_param *param)
 
     grub_snprintf(param->vtoy_img_path, sizeof(param->vtoy_img_path), "%s", pos);
     
-    ventoy_get_disk_guid(file->name, param->vtoy_disk_guid, param->vtoy_disk_signature);
+    if (ventoy_get_disk_guid(file->name, param->vtoy_disk_guid, param->vtoy_disk_signature))
+    {
+        /* Missing disk identifiers can still be resolved by disk size later. */
+        grub_errno = GRUB_ERR_NONE;
+    }
 
     param->vtoy_img_size = file->size;
 
@@ -6321,7 +6339,14 @@ static grub_err_t ventoy_cmd_show_secondary_menu(grub_extcmd_context_t ctxt, int
         else if (select == 5)
         {
             grub_env_set("VTOY_CHKSUM_FILE_PATH", args[0]);
-            grub_script_execute_sourcecode("configfile $vtoy_efi_part/grub/checksum.cfg");
+            if (ventoy_get_env("VTOY_RUNTIME_PATH"))
+            {
+                grub_script_execute_sourcecode("configfile $prefix/checksum.cfg");
+            }
+            else
+            {
+                grub_script_execute_sourcecode("configfile $vtoy_efi_part/grub/checksum.cfg");
+            }
         }
         else if (select == 6)
         {

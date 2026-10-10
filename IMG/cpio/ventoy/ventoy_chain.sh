@@ -100,7 +100,11 @@ ventoy_get_os_type() {
         echo 'rhel7'; return
 
     elif $GREP -q 'euleros' /proc/version; then
-        echo 'rhel7'; return
+        if [ -d /usr/Euler/project/init ]; then
+            echo 'euleros'; return
+        else
+            echo 'rhel7'; return
+        fi
 
     # SUSE
     elif $GREP -q 'SUSE' /proc/version; then
@@ -402,7 +406,10 @@ ventoy_get_os_type() {
         fi
     fi
     
-    
+    if [ -f /scripts/casper ]; then
+        echo "debian"; return
+    fi
+
     echo "default"
 }
 
@@ -410,6 +417,9 @@ VTOS=$(ventoy_get_os_type)
 echo "OS=###${VTOS}###" >>$VTLOG
 if [ -e "$VTOY_PATH/hook/$VTOS/ventoy-hook.sh" ]; then
     $BUSYBOX_PATH/sh "$VTOY_PATH/hook/$VTOS/ventoy-hook.sh"
+fi
+if [ -e "$VTOY_PATH/hook/$VTOS/ventoy-uauto-hook.sh" ]; then
+    $BUSYBOX_PATH/sh "$VTOY_PATH/hook/$VTOS/ventoy-uauto-hook.sh"
 fi
 
 
@@ -436,7 +446,11 @@ fi
 #                                                                  #
 ####################################################################
 if [ -f "/live_injection_7ed136ec_7a61_4b54_adc3_ae494d5106ea/hook.sh" ]; then
-    $BUSYBOX_PATH/sh "/live_injection_7ed136ec_7a61_4b54_adc3_ae494d5106ea/hook.sh" $VTOS
+    echo "==== Begin Call live injection hook.sh $VTOS" >> $VTLOG
+    $BUSYBOX_PATH/sh "/live_injection_7ed136ec_7a61_4b54_adc3_ae494d5106ea/hook.sh" $VTOS  >>$VTLOG 2>&1
+    echo "==== Finish Call live injection hook.sh $VTOS" >> $VTLOG
+else
+    echo "No live injection" >> $VTLOG
 fi
 
 
